@@ -197,6 +197,13 @@ class CentralManagerDelegate(NSObject):
                 uuid_string, device.name, RSSI, advertisementData.keys()))
 
     def centralManager_didConnectPeripheral_(self, central, peripheral):
+        if self._connection_state == CMDConnectionState.CONNECTED:
+            logger.debug(
+                "Already connected to device uuid {}".format(
+                    peripheral.identifier().UUIDString()
+                )
+            )
+            return
         logger.debug(
             "Successfully connected to device uuid {}".format(
                 peripheral.identifier().UUIDString()
