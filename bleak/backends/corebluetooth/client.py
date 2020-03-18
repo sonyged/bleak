@@ -41,7 +41,11 @@ class BleakClientCoreBluetooth(BaseBleakClient):
     def __init__(self, address: str, loop: AbstractEventLoop = None, **kwargs):
         super(BleakClientCoreBluetooth, self).__init__(address, loop, **kwargs)
 
-        self._device_info = None
+        device = kwargs.get("device", None)
+        if device:
+            self._device_info = device.details
+        else:
+            self._device_info = None
         self._requester = None
         self._callbacks = {}
         self._services = None
@@ -59,22 +63,23 @@ class BleakClientCoreBluetooth(BaseBleakClient):
             Boolean representing connection status.
 
         """
-        timeout = kwargs.get("timeout", self._timeout)
-        devices = await discover(timeout=timeout, loop=self.loop)
-        sought_device = list(
-            filter(lambda x: x.address.upper() == self.address.upper(), devices)
-        )
-
-        if len(sought_device):
-            self._device_info = sought_device[0].details
-        else:
-            raise BleakError(
-                "Device with address {} was not found".format(self.address)
+        if not self._device_info:
+            timeout = kwargs.get("timeout", self._timeout)
+            devices = await discover(timeout=timeout, loop=self.loop)
+            sought_device = list(
+                filter(lambda x: x.address.upper() == self.address.upper(), devices)
             )
+
+            if len(sought_device):
+                self._device_info = sought_device[0].details
+            else:
+                raise BleakError(
+                    "Device with address {} was not found".format(self.address)
+                )
 
         logger.debug("Connecting to BLE device @ {}".format(self.address))
 
-        await cbapp.central_manager_delegate.connect_(sought_device[0].details)
+        await cbapp.central_manager_delegate.connect_(self._device_info)
 
         # Now get services
         await self.get_services()
